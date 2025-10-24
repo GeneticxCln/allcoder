@@ -23,16 +23,17 @@ jobs:
           always-auth: true
       - name: Read package metadata
         id: meta
+        continue-on-error: true
         run: |
           echo "name=$(node -e \"console.log(require('./package.json').name)\")" >> "$GITHUB_OUTPUT"
           echo "version=$(node -e \"console.log(require('./package.json').version)\")" >> "$GITHUB_OUTPUT"
       - name: Check if version already published
         id: check
+        continue-on-error: true
         env:
           NAME: ${{ steps.meta.outputs.name }}
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          set -e
           if npm view "$NAME" version >/dev/null 2>&1; then
             PUBLISHED=$(npm view "$NAME" version)
             if [ "$PUBLISHED" = "$VERSION" ]; then
