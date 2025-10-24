@@ -1,6 +1,6 @@
 {
   "name": "allcoder",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Config toolkit CLI for real-world projects: validate, format, convert, merge, and redact JSON/YAML/TOML.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
