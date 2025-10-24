@@ -5,6 +5,11 @@ on:
     tags:
       - "v*.*.*"
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to npm (for manual runs)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -21,42 +26,20 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
           always-auth: true
-      - name: Read package metadata
-        id: meta
-        continue-on-error: true
-        run: |
-          echo "name=$(node -p \"require('./package.json').name\")" >> "$GITHUB_OUTPUT"
-          echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
-      - name: Check if version already published
-        id: check
-        continue-on-error: true
-        env:
-          NAME: ${{ steps.meta.outputs.name }}
-          VERSION: ${{ steps.meta.outputs.version }}
-        run: |
-          if npm view "$NAME@${VERSION}" version >/dev/null 2>&1; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "Version $VERSION already published; skipping."
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Done (skip)
-        if: steps.check.outputs.skip == 'true'
-        run: echo "Already published; no work to do"
-      - name: Configure npm auth
-        if: steps.check.outputs.skip != 'true'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
       - name: Install
-        if: steps.check.outputs.skip != 'true'
         run: npm ci
       - name: Build
-        if: steps.check.outputs.skip != 'true'
         run: npm run build
+      - name: Configure npm auth
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish == true) }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
       - name: Publish
-        if: steps.check.outputs.skip != 'true'
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish == true) }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public
+      - name: Dry run (no publish)
+        if: ${{ !(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) && !(github.event_name == 'workflow_dispatch' && inputs.publish == true) }}
+        run: echo "Dry run completed (no publish)"
