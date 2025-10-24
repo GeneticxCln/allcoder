@@ -32,12 +32,11 @@ jobs:
           NAME: ${{ steps.meta.outputs.name }}
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          if npm view "$NAME" version >/dev/null 2>&1; then
-            PUBLISHED=$(npm view "$NAME" version)
-            if [ "$PUBLISHED" = "$VERSION" ]; then
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              echo "Version $VERSION already published; skipping."
-            fi
+          if npm view "$NAME@${VERSION}" version >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Version $VERSION already published; skipping."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Configure npm auth
         if: steps.check.outputs.skip != 'true'
