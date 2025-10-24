@@ -2,57 +2,48 @@
 
 Config toolkit CLI for real-world projects: validate, format, convert, merge, and redact JSON/YAML/TOML.
 
-## Features
-- Validate files against a JSON Schema (`allcoder validate --schema schema.json file.yaml`)
-- Format configs consistently (`allcoder format -i config.yaml`)
-- Convert between formats (`allcoder convert input.yaml --to json -o output.json`)
-- Merge multiple configs, deep by default (`allcoder merge a.yaml b.yaml -o merged.yaml`)
-- Redact sensitive keys recursively (`allcoder redact -k password,token -i secrets.yaml`)
+## Install
+- Local dev
+  ```bash
+  npm install
+  npm run build
+  ```
+- Use via npx (after publish):
+  ```bash
+  npx allcoder --help
+  ```
 
-## Install (dev)
+## Usage
 ```bash
-python -m venv .venv
-. .venv/bin/activate
-pip install -e .[dev]
-```
+# Validate (detects format from extension unless --format is provided)
+allcoder validate config.yaml
 
-## Usage (CLI)
-```bash
-# Validate
-allcoder validate --schema schema.json settings.yaml
+# Format to stdout
+allcoder format -f json config.json
 
-# Format (check only)
-allcoder format --check settings.yaml
+# Format in place with sorted keys
+allcoder format --sort-keys -w config.yaml
 
 # Convert
-allcoder convert settings.yaml --to toml -o settings.toml
+allcoder convert --to yaml config.json > config.yaml
 
-# Merge (deep)
-allcoder merge base.yaml override.yaml -o merged.yaml
+# Merge two YAML files (arrays replaced by default)
+allcoder merge -f yaml base.yaml override.yaml > merged.yaml
 
-# Redact
-allcoder redact -k password,token -i secrets.yaml
+# Redact sensitive keys
+allcoder redact -f json --keys password,token secrets.json > redacted.json
 ```
 
-## API server
-```bash
-# Run API locally
-allcoder serve --host 0.0.0.0 --port 8000
-# Or with Docker
-docker build -t allcoder:latest .
-docker run --rm -p 8000:8000 allcoder serve --host 0.0.0.0 --port 8000
-# Check version
-curl http://localhost:8000/version
+## Library
+```ts
+import { parseByFormat, stringifyByFormat, mergeDeep, redact } from "allcoder";
 ```
 
-## Publish
-- Tag a release to publish to PyPI and GHCR: `git tag v0.1.0 && git push origin v0.1.0`
-- Requires secrets: `PYPI_API_TOKEN` for PyPI; GHCR uses `GITHUB_TOKEN`.
-
-## Development
-- Lint: `ruff check .` and format: `ruff format .`
-- Type check: `mypy src`
-- Test: `pytest`
+## Scripts
+- Lint: `npm run lint`
+- Typecheck: `npm run typecheck`
+- Test: `npm test`
+- Build: `npm run build`
 
 ## License
 MIT

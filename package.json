@@ -3,6 +3,19 @@
   "version": "1.0.0",
   "description": "Config toolkit CLI for real-world projects: validate, format, convert, merge, and redact JSON/YAML/TOML.",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js"
+    },
+    "./cli": "./dist/cli.js"
+  },
+  "files": [
+    "dist/**",
+    "README.md",
+    "LICENSE"
+  ],
   "directories": {
     "doc": "docs",
     "test": "tests"
@@ -11,14 +24,35 @@
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src tests --ext .ts,.tsx,.js,.cjs,.mjs --no-error-on-unmatched-pattern",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "json",
+    "yaml",
+    "toml",
+    "cli",
+    "format",
+    "convert",
+    "merge",
+    "redact"
+  ],
+  "author": "Quinton",
+  "license": "MIT",
   "type": "commonjs",
   "bin": {
     "allcoder": "dist/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GeneticxCln/allcoder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GeneticxCln/allcoder/issues"
+  },
+  "homepage": "https://github.com/GeneticxCln/allcoder#readme",
+  "engines": {
+    "node": ">=18.17"
   },
   "devDependencies": {
     "@types/node": "^24.9.1",
@@ -32,7 +66,6 @@
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "commander": "^14.0.1",
-    "toml": "^3.0.0",
     "yaml": "^2.8.1"
   }
 }
