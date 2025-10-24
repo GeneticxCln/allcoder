@@ -21,33 +21,39 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
           always-auth: true
+      - name: Read package metadata
+        id: meta
+        run: |
+          echo "name=$(node -e \"console.log(require('./package.json').name)\")" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -e \"console.log(require('./package.json').version)\")" >> "$GITHUB_OUTPUT"
+      - name: Check if version already published
+        id: check
+        env:
+          NAME: ${{ steps.meta.outputs.name }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -e
+          if npm view "$NAME" version >/dev/null 2>&1; then
+            PUBLISHED=$(npm view "$NAME" version)
+            if [ "$PUBLISHED" = "$VERSION" ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "Version $VERSION already published; skipping."
+            fi
+          fi
       - name: Configure npm auth
+        if: steps.check.outputs.skip != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-          npm --version
-          npm whoami || true
       - name: Install
+        if: steps.check.outputs.skip != 'true'
         run: npm ci
       - name: Build
+        if: steps.check.outputs.skip != 'true'
         run: npm run build
       - name: Publish
-        id: publish
+        if: steps.check.outputs.skip != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          set -o pipefail
-          npm publish --access public 2>&1 | tee publish.log
-          echo "code=$?" >> "$GITHUB_OUTPUT"
-      - name: Upload publish log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: publish-log
-          path: publish.log
-      - name: Fail if publish failed
-        if: steps.publish.outputs.code != '0'
-        run: |
-          echo "Publish failed"
-          exit 1
+        run: npm publish --provenance --access public
