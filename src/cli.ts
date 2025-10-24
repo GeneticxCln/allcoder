@@ -68,7 +68,7 @@ program
         const ok = validate(data);
         if (!ok) {
           const details = (validate.errors ?? [])
-            .map((e: ErrorObject) => `${e.instancePath ?? e.dataPath ?? '/'} ${e.message}`)
+            .map((e: ErrorObject) => `${e.instancePath ?? '/'} ${e.message}`)
             .join("; ") || "Invalid";
           throw new Error(`Schema validation failed: ${details}`);
         }
