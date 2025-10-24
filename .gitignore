@@ -78,11 +78,9 @@ Thumbs.db
 # Node/TS
 node_modules/
 ts/node_modules/
-ts/dist/
 
 # Node build/test artifacts
 coverage/
-dist/
 npm-debug.log*
 yarn-error.log*
 pnpm-debug.log*
