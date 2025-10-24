@@ -5,5 +5,9 @@ export default defineConfig({
     include: ["tests/**/*.{test,spec}.ts"],
     environment: "node",
     passWithNoTests: true,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+    },
   },
 });

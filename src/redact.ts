@@ -1,5 +1,7 @@
 export type RedactOptions = {
   keys?: string[];
+  keyRegex?: RegExp;
+  paths?: string[]; // dot-separated paths
   replacement?: unknown;
 };
 
@@ -29,19 +31,25 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 export function redact(value: unknown, opts: RedactOptions = {}): unknown {
   const keys = (opts.keys ?? DEFAULT_KEYS).map((k) => k.toLowerCase());
+  const keyRegex = opts.keyRegex;
+  const pathSet = new Set((opts.paths ?? []).map((p) => p.trim()).filter(Boolean));
   const replacement = Object.prototype.hasOwnProperty.call(opts, "replacement")
     ? opts.replacement
     : "[REDACTED]";
 
-  function walk(v: unknown): unknown {
-    if (Array.isArray(v)) return v.map(walk);
+  function walk(v: unknown, pathAcc: (string | number)[] = []): unknown {
+    if (Array.isArray(v)) return v.map((item, idx) => walk(item, [...pathAcc, idx]));
     if (isPlainObject(v)) {
       const out: Record<string, unknown> = {};
       for (const [k, val] of Object.entries(v)) {
-        if (keys.includes(k.toLowerCase())) {
+        const fullPath = [...pathAcc, k].join(".");
+        const byKey = keys.includes(k.toLowerCase());
+        const byRegex = keyRegex ? keyRegex.test(k) : false;
+        const byPath = pathSet.has(fullPath);
+        if (byKey || byRegex || byPath) {
           out[k] = replacement;
         } else {
-          out[k] = walk(val);
+          out[k] = walk(val, [...pathAcc, k]);
         }
       }
       return out;

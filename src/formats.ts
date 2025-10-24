@@ -2,8 +2,10 @@ import fs from "fs/promises";
 import path from "path";
 import { parse as parseToml, stringify as stringifyToml } from "@iarna/toml";
 import YAML from "yaml";
+import JSON5 from "json5";
+import { parse as parseJsonc } from "jsonc-parser";
 
-export type Format = "json" | "yaml" | "toml";
+export type Format = "json" | "yaml" | "toml" | "jsonc" | "json5";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return (
@@ -29,6 +31,8 @@ export function sortKeysDeep(value: unknown): unknown {
 export function detectFormatFromPath(filePath: string): Format | null {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === ".json") return "json";
+  if (ext === ".jsonc") return "jsonc";
+  if (ext === ".json5") return "json5";
   if (ext === ".yml" || ext === ".yaml") return "yaml";
   if (ext === ".toml") return "toml";
   return null;
@@ -38,6 +42,10 @@ export function parseByFormat(format: Format, input: string): unknown {
   switch (format) {
     case "json":
       return JSON.parse(input) as unknown;
+    case "jsonc":
+      return parseJsonc(input) as unknown;
+    case "json5":
+      return JSON5.parse(input) as unknown;
     case "yaml":
       return YAML.parse(input) as unknown;
     case "toml":
@@ -61,6 +69,8 @@ export function stringifyByFormat(
   const val = sortKeys ? sortKeysDeep(value) : value;
   switch (format) {
     case "json":
+    case "jsonc":
+    case "json5":
       return JSON.stringify(val, null, indent) + "\n";
     case "yaml":
       return YAML.stringify(val, { indent });

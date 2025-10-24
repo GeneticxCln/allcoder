@@ -20,11 +20,13 @@
     "doc": "docs",
     "test": "tests"
   },
+  
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src tests --ext .ts,.tsx,.js,.cjs,.mjs --no-error-on-unmatched-pattern",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "checks": "npm run lint && npm run typecheck && npm test && npm run build",
     "version:patch": "npm version patch -m 'chore: release v%s'",
     "version:minor": "npm version minor -m 'chore: release v%s'",
@@ -68,7 +70,11 @@
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
+    "ajv": "^8.17.1",
     "commander": "^14.0.1",
+    "fast-glob": "^3.3.2",
+    "json5": "^2.2.3",
+    "jsonc-parser": "^3.3.1",
     "yaml": "^2.8.1"
   }
 }
