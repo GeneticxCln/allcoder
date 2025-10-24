@@ -15,21 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
-          always-auth: true
       - name: Read package metadata
         id: meta
-        continue-on-error: true
         run: |
-          echo "name=$(node -e \"console.log(require('./package.json').name)\")" >> "$GITHUB_OUTPUT"
-          echo "version=$(node -e \"console.log(require('./package.json').version)\")" >> "$GITHUB_OUTPUT"
+          echo "name=$(jq -r .name package.json)" >> "$GITHUB_OUTPUT"
+          echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
       - name: Check if version already published
         id: check
-        continue-on-error: true
         env:
           NAME: ${{ steps.meta.outputs.name }}
           VERSION: ${{ steps.meta.outputs.version }}
@@ -41,6 +33,13 @@ jobs:
               echo "Version $VERSION already published; skipping."
             fi
           fi
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.skip != 'true'
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          always-auth: true
       - name: Configure npm auth
         if: steps.check.outputs.skip != 'true'
         env:
