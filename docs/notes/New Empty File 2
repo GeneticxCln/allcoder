@@ -1,0 +1,70 @@
+    print(f"\n🎯 Task: {task}\n")
+    
+    iterations = 0
+    current_prompt = task
+    
+    while iterations < self.config.max_iterations:
+        iterations += 1
+        print(f"💭 Iteration {iterations}...")
+        
+        response = self._call_ollama(current_prompt, system_prompt)
+        print(f"\n🤖 Agent: {response}\n")
+        
+        action = self.parse_action(response)
+        
+        if not action:
+            # No action found, agent is done or providing final answer
+            if any(keyword in response.lower() for keyword in ['done', 'complete', 'finished', 'final answer']):
+                return response
+            
+            # Ask if there's anything else to do
+            if iterations >= 2:
+                return response
+            
+            current_prompt = "Continue with the task or let me know if you're done."
+            continue
+        
+        # Execute the action
+        print(f"⚡ Executing {action['type']}...")
+        result = self._execute_action(action)
+        print(f"📊 Result: {json.dumps(result, indent=2)}\n")
+        
+        # Provide feedback to the agent
+        current_prompt = f"The {action['type']} execution result:\n{json.dumps(result, indent=2)}\n\nContinue with the task or provide the final answer."
+    
+    return "Task completed or maximum iterations reached."
+
+def _execute_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
+    """Execute a parsed action"""
+    action_type = action['type']
+    
+    if action_type == 'python':
+        return self.execute_python_code(action['code'])
+    
+    elif action_type == 'bash':
+        return self.execute_bash_command(action['code'])
+    
+    elif action_type == 'read_file':
+        params = action['params'].strip().strip('"\'')
+        return self.read_file(params)
+    
+    elif action_type == 'write_file':
+        # Parse filepath and content
+        match = re.match(r'["\'](.+?)["\']\s*,\s*["\'](.+?)["\']', action['params'])
+        if match:
+            return self.write_file(match.group(1), match.group(2))
+        return {"success": False, "error": "Invalid parameters"}
+    
+    elif action_type == 'list_dir':
+        params = action['params'].strip().strip('"\'') or "."
+        return self.list_directory(params)
+    
+    return {"success": False, "error": f"Unknown action type: {action_type}"}
+
+def chat(self, message: str) -> str:
+    """Simple chat interface"""
+    return self._call_ollama(message)
+
+def reset(self):
+    """Reset conversation history"""
+    self.conversation_history = []

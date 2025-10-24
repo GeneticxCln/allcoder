@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "allcoder"
+version = "0.1.0"
+description = "Config toolkit CLI and API: validate, format, convert, merge, and redact JSON/YAML/TOML."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+  { name = "Quinton" }
+]
+keywords = ["cli", "api", "config", "yaml", "json", "toml", "validation", "formatting"]
+
+dependencies = [
+  "typer>=0.12.5",
+  "pyyaml>=6.0.2",
+  "jsonschema>=4.23.0",
+  "tomlkit>=0.13.2",
+  "rich>=13.9.2",
+  "fastapi>=0.111.0",
+  "uvicorn>=0.30.0",
+]
+
+[project.scripts]
+allcoder = "allcoder.cli:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "ruff>=0.6.0",
+  "mypy>=1.10.0",
+  "build>=1.2.1",
+  "pre-commit>=3.7.0",
+  "coverage>=7.6.0",
+  "httpx>=0.27.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

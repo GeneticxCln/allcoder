@@ -1,0 +1,20 @@
+from agent import OllamaAgent, AgentConfig
+
+# Initialize
+agent = OllamaAgent()
+
+# Run a coding task
+result = agent.run_task("""
+Create a web scraper that fetches the title of https://example.com
+and saves it to a file called output.txt
+""")
+
+# Simple chat
+response = agent.chat("Explain how quicksort works")
+
+# Execute code directly
+result = agent.execute_python_code("""
+import math
+print(f"Square root of 16 is {math.sqrt(16)}")
+""")
+print(result['stdout'])

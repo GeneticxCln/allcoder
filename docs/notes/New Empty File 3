@@ -1,0 +1,47 @@
+print("🚀 Ollama Coding Agent")
+print("=" * 50)
+
+# Initialize agent
+try:
+    agent = OllamaAgent()
+    print("✅ Agent initialized successfully\n")
+except Exception as e:
+    print(f"❌ Error initializing agent: {e}")
+    sys.exit(1)
+
+# Interactive mode
+if len(sys.argv) > 1:
+    task = " ".join(sys.argv[1:])
+    result = agent.run_task(task)
+    print(f"\n✅ Final Result:\n{result}")
+else:
+    print("Interactive mode. Type 'exit' to quit, 'reset' to clear history.\n")
+    
+    while True:
+        try:
+            user_input = input("You: ").strip()
+            
+            if not user_input:
+                continue
+            
+            if user_input.lower() == 'exit':
+                print("Goodbye!")
+                break
+            
+            if user_input.lower() == 'reset':
+                agent.reset()
+                print("🔄 Conversation reset")
+                continue
+            
+            if user_input.startswith('task:'):
+                result = agent.run_task(user_input[5:].strip())
+            else:
+                result = agent.chat(user_input)
+            
+            print(f"\n🤖 Agent: {result}\n")
+            
+        except KeyboardInterrupt:
+            print("\n\nGoodbye!")
+            break
+        except Exception as e:
+            print(f"❌ Error: {e}\n")

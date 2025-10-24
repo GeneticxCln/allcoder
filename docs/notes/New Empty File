@@ -1,0 +1,239 @@
+# agent.py
+import os
+import json
+import subprocess
+import tempfile
+import re
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
+from pathlib import Path
+import requests
+
+@dataclass
+class AgentConfig:
+    model: str = "codellama"
+    base_url: str = "http://localhost:11434"
+    temperature: float = 0.7
+    max_iterations: int = 10
+    timeout: int = 120
+
+class OllamaAgent:
+    def __init__(self, config: AgentConfig = AgentConfig()):
+        self.config = config
+        self.conversation_history: List[Dict] = []
+        self.base_url = config.base_url.rstrip('/')
+        self._verify_ollama_connection()
+        
+    def _verify_ollama_connection(self):
+        """Verify Ollama is running and model is available"""
+        try:
+            response = requests.get(f"{self.base_url}/api/tags", timeout=5)
+            response.raise_for_status()
+            models = response.json().get('models', [])
+            
+            if not any(m['name'].startswith(self.config.model) for m in models):
+                print(f"Model {self.config.model} not found. Pulling...")
+                self._pull_model()
+        except requests.exceptions.RequestException as e:
+            raise ConnectionError(f"Cannot connect to Ollama at {self.base_url}: {e}")
+    
+    def _pull_model(self):
+        """Pull the model if not available"""
+        response = requests.post(
+            f"{self.base_url}/api/pull",
+            json={"name": self.config.model},
+            stream=True,
+            timeout=600
+        )
+        for line in response.iter_lines():
+            if line:
+                print(json.loads(line).get('status', ''))
+    
+    def _call_ollama(self, prompt: str, system_prompt: str = "") -> str:
+        """Make API call to Ollama"""
+        messages = []
+        
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        
+        messages.extend(self.conversation_history)
+        messages.append({"role": "user", "content": prompt})
+        
+        payload = {
+            "model": self.config.model,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                "temperature": self.config.temperature
+            }
+        }
+        
+        response = requests.post(
+            f"{self.base_url}/api/chat",
+            json=payload,
+            timeout=self.config.timeout
+        )
+        response.raise_for_status()
+        
+        result = response.json()
+        assistant_message = result['message']['content']
+        
+        self.conversation_history.append({"role": "user", "content": prompt})
+        self.conversation_history.append({"role": "assistant", "content": assistant_message})
+        
+        return assistant_message
+    
+    def execute_python_code(self, code: str) -> Dict[str, Any]:
+        """Execute Python code safely in isolated environment"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script_path = Path(tmpdir) / "script.py"
+            script_path.write_text(code)
+            
+            try:
+                result = subprocess.run(
+                    ["python3", str(script_path)],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    cwd=tmpdir
+                )
+                
+                return {
+                    "success": result.returncode == 0,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                    "returncode": result.returncode
+                }
+            except subprocess.TimeoutExpired:
+                return {
+                    "success": False,
+                    "stdout": "",
+                    "stderr": "Execution timeout (30s limit)",
+                    "returncode": -1
+                }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "stdout": "",
+                    "stderr": str(e),
+                    "returncode": -1
+                }
+    
+    def execute_bash_command(self, command: str) -> Dict[str, Any]:
+        """Execute bash command safely"""
+        # Blacklist dangerous commands
+        dangerous_patterns = [
+            r'\brm\s+-rf\s+/', r'\bmkfs\b', r'\bdd\b.*of=/dev/',
+            r'>\s*/dev/sd', r'\bformat\b', r':(){:|:&};:'
+        ]
+        
+        for pattern in dangerous_patterns:
+            if re.search(pattern, command):
+                return {
+                    "success": False,
+                    "stdout": "",
+                    "stderr": "Dangerous command blocked",
+                    "returncode": -1
+                }
+        
+        try:
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            return {
+                "success": result.returncode == 0,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": "Command timeout (30s limit)",
+                "returncode": -1
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": str(e),
+                "returncode": -1
+            }
+    
+    def read_file(self, filepath: str) -> Dict[str, Any]:
+        """Read file contents"""
+        try:
+            path = Path(filepath).resolve()
+            
+            # Security: prevent reading system files
+            restricted_paths = ['/etc/shadow', '/etc/passwd']
+            if str(path) in restricted_paths:
+                return {"success": False, "error": "Access denied"}
+            
+            if path.exists() and path.is_file():
+                content = path.read_text()
+                return {"success": True, "content": content}
+            else:
+                return {"success": False, "error": "File not found"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    def write_file(self, filepath: str, content: str) -> Dict[str, Any]:
+        """Write content to file"""
+        try:
+            path = Path(filepath).resolve()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content)
+            return {"success": True, "path": str(path)}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    def list_directory(self, dirpath: str = ".") -> Dict[str, Any]:
+        """List directory contents"""
+        try:
+            path = Path(dirpath).resolve()
+            if path.exists() and path.is_dir():
+                items = [str(item.relative_to(path)) for item in path.iterdir()]
+                return {"success": True, "items": items}
+            else:
+                return {"success": False, "error": "Directory not found"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    def parse_action(self, response: str) -> Optional[Dict[str, Any]]:
+        """Parse action from LLM response"""
+        # Look for code blocks
+        python_match = re.search(r'```python\n(.*?)```', response, re.DOTALL)
+        bash_match = re.search(r'```bash\n(.*?)```', response, re.DOTALL)
+        
+        if python_match:
+            return {"type": "python", "code": python_match.group(1).strip()}
+        elif bash_match:
+            return {"type": "bash", "code": bash_match.group(1).strip()}
+        
+        # Look for explicit actions
+        action_match = re.search(r'ACTION:\s*(\w+)\((.*?)\)', response, re.DOTALL)
+        if action_match:
+            action_type = action_match.group(1)
+            action_params = action_match.group(2)
+            return {"type": action_type, "params": action_params}
+        
+        return None
+    
+    def run_task(self, task: str) -> str:
+        """Run a task with the agent"""
+        system_prompt = """You are a helpful AI coding assistant. You can:
+1. Write and execute Python code
+2. Run bash commands
+3. Read and write files
+4. List directories
+
+When you need to execute code, use markdown code blocks:
+```python
+# your code here

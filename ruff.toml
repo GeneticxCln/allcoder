@@ -1,0 +1,13 @@
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[lint]
+select = ["E", "F", "I", "B", "UP", "N", "S", "C4", "SIM", "PL", "RUF"]
+ignore = ["S101", "S104"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"

@@ -1,0 +1,5 @@
+# Command line task
+python agent.py "Create a Python script that finds all prime numbers up to 100"
+
+# Interactive mode
+python agent.py

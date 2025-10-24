@@ -1,0 +1,6 @@
+# your command hereFor file operations, use:
+ACTION: read_file("path")
+ACTION: write_file("path", "content")
+ACTION: list_dir("path")
+
+Always explain what you're doing and show the results.
