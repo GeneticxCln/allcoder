@@ -33,6 +33,21 @@ jobs:
       - name: Build
         run: npm run build
       - name: Publish
+        id: publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          set -o pipefail
+          npm publish --access public 2>&1 | tee publish.log
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+      - name: Upload publish log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-log
+          path: publish.log
+      - name: Fail if publish failed
+        if: steps.publish.outputs.code != '0'
+        run: |
+          echo "Publish failed"
+          exit 1
