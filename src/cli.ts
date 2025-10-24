@@ -5,7 +5,7 @@ import { detectFormatFromPath, parseByFormat, stringifyByFormat, type Format, re
 import { mergeDeep } from "./merge";
 import { redact } from "./redact";
 import pkg from "../package.json";
-import Ajv from "ajv";
+import Ajv, { ErrorObject } from "ajv";
 
 async function readStdin(): Promise<string> {
   return await new Promise((resolve, reject) => {
@@ -68,7 +68,7 @@ program
         const ok = validate(data);
         if (!ok) {
           const details = (validate.errors ?? [])
-            .map((e: any) => `${e.instancePath ?? e.dataPath ?? '/'} ${e.message}`)
+            .map((e: ErrorObject) => `${e.instancePath ?? e.dataPath ?? '/'} ${e.message}`)
             .join("; ") || "Invalid";
           throw new Error(`Schema validation failed: ${details}`);
         }
