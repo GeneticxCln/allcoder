@@ -23,11 +23,13 @@ jobs:
           always-auth: true
       - name: Read package metadata
         id: meta
+        continue-on-error: true
         run: |
           echo "name=$(node -p \"require('./package.json').name\")" >> "$GITHUB_OUTPUT"
           echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
       - name: Check if version already published
         id: check
+        continue-on-error: true
         env:
           NAME: ${{ steps.meta.outputs.name }}
           VERSION: ${{ steps.meta.outputs.version }}
@@ -38,6 +40,9 @@ jobs:
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Done (skip)
+        if: steps.check.outputs.skip == 'true'
+        run: echo "Already published; no work to do"
       - name: Configure npm auth
         if: steps.check.outputs.skip != 'true'
         env:
